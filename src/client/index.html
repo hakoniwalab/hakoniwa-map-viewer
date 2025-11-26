@@ -14,8 +14,25 @@
   <style>
     html, body {
       margin: 0;
+      padding: 0;
       height: 100%;
       overflow: hidden;
+    }
+    #main-container {
+      display: flex;
+      height: 100%;
+    }
+    #panel {
+      width: 300px;
+      height: 100%;
+      background-color: #f0f0f0;
+      overflow-y: auto;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    #map-container {
+      flex: 1;
+      height: 100%;
     }
     #map {
       width: 100%;
@@ -25,7 +42,15 @@
 </head>
 
 <body>
-  <div id="map"></div>
+  <div id="main-container">
+    <div id="panel">
+      <!-- Buttons and properties will go here -->
+      <button id="connect-btn">connect</button>
+    </div>
+    <div id="map-container">
+      <div id="map"></div>
+    </div>
+  </div>
 
   <!-- Leaflet JS（ここも integrity / crossorigin 消す） -->
   <script
