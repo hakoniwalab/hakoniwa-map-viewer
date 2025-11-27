@@ -14,7 +14,7 @@ let droneTrailPolyline = null;
 
 const ORIGIN_LAT = 35.6812;   // zone の原点（仮）
 const ORIGIN_LON = 139.7671;
-const TRAIL_KEEP_MS = 10_000; // 10秒だけ残す
+const TRAIL_KEEP_MS = 100_000; // 100秒だけ残す
 let followMode = true;        // 自動スクロールON/OFF
 const droneIcon = L.icon({
   iconUrl: '/images/drone.svg',
@@ -51,18 +51,31 @@ function updateDroneTrail(lat, lon) {
   const now = Date.now();
   droneTrail.push({ lat, lon, t: now });
 
+  // デバッグ用ログ
+  // console.log("trail push:", lat.toFixed(7), lon.toFixed(7));
+
   // 古い点を削除
   const cutoff = now - TRAIL_KEEP_MS;
   droneTrail = droneTrail.filter(p => p.t >= cutoff);
 
+  // 2点未満なら線は見えないのでここで終わり
+  if (droneTrail.length < 2) {
+    return;
+  }
+
   const latlngs = droneTrail.map(p => [p.lat, p.lon]);
 
   if (!droneTrailPolyline) {
-    droneTrailPolyline = L.polyline(latlngs, { weight: 2 }).addTo(map);
+    droneTrailPolyline = L.polyline(latlngs, {
+      color: 'red',      // はっきりした色に
+      weight: 5,         // 少し太め
+      opacity: 0.9
+    }).addTo(map);
   } else {
     droneTrailPolyline.setLatLngs(latlngs);
   }
 }
+
 
 // OSMタイル
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
