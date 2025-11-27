@@ -1,4 +1,6 @@
 import { Hakoniwa } from './hakoniwa/hakoniwa-pdu.js';
+import { Twist } from '/thirdparty/hakoniwa-pdu-javascript/src/pdu_msgs/geometry_msgs/pdu_jstype_Twist.js';
+import { pduToJs_Twist } from '/thirdparty/hakoniwa-pdu-javascript/src/pdu_msgs/geometry_msgs/pdu_conv_Twist.js';
 
 console.log("[HakoniwaViewer] main.js loaded");
 
@@ -46,6 +48,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 const buf = pdu.read_pdu_raw_data('Drone', 'pos');
                 if (buf) {
                     console.log("[HakoniwaViewer] raw len:", buf.byteLength);
+                    const twist = pduToJs_Twist(buf);
+                    console.log("[HakoniwaViewer] Twist:", twist);
                 } else {
                     console.log("[HakoniwaViewer] raw len: 0 (no buffer)");
                 }

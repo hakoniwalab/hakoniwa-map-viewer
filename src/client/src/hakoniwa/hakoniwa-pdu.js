@@ -1,4 +1,7 @@
-import { PduManager, WebSocketCommunicationService } from '../index.js';
+import { 
+    PduManager, 
+    WebSocketCommunicationService
+} from '../index.js';
 
 const CONFIG = {
   pdu_def_path: "/config/pdudef.json",
