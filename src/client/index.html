@@ -40,18 +40,92 @@
       width: 100%;
       height: 100%;
     }
+
+    .prop-table {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+    }
+
+    .prop-table td {
+      padding: 2px 4px;
+    }
+
+    .prop-table .sign {
+      width: 12px;
+      text-align: right;
+    }
+
+    .prop-table .value {
+      width: 70px;
+      text-align: right;
+    }
+    .prop-box {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #f9f9f9;
+      padding: 6px 8px;
+      margin-bottom: 16px;
+    }
+
+    .prop-box h4 {
+      margin: 0 0 6px 0;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .prop-table {
+      width: 100%;
+    }
+
   </style>
 </head>
 
 <body>
   <div id="main-container">
     <div id="panel">
-      <!-- Buttons and properties will go here -->
+      <!-- 接続ボタン -->
       <button id="connect-btn">connect</button>
-      <label>
-        <input type="checkbox" id="follow-checkbox" checked>
-        Follow Drone
-      </label>
+
+      <!-- 機体選択 -->
+      <div style="margin-top:8px;">
+        <label for="drone-select"><strong>Drone</strong></label><br>
+        <select id="drone-select"></select>
+      </div>
+
+      <!-- Follow -->
+      <div style="margin-top:4px;">
+        <label>
+          <input type="checkbox" id="follow-checkbox" checked>
+          Follow selected
+        </label>
+      </div>
+
+      <hr>
+
+      <!-- プロパティ表示 -->
+      <h3>Drone State</h3>
+      <div class="prop-box">
+        <h4>Position (ROS, m)</h4>
+        <table class="prop-table">
+          <tr><td>x:</td><td class="sign" id="prop-x-sign"></td><td class="value" id="prop-x"></td></tr>
+          <tr><td>y:</td><td class="sign" id="prop-y-sign"></td><td class="value" id="prop-y"></td></tr>
+          <tr><td>z:</td><td class="sign" id="prop-z-sign"></td><td class="value" id="prop-z"></td></tr>
+        </table>
+      </div>
+
+      <div class="prop-box">
+        <h4>Attitude (RPY, deg)</h4>
+        <table class="prop-table">
+          <tr><td>roll:</td><td class="sign" id="prop-roll-sign"></td><td class="value" id="prop-roll"></td></tr>
+          <tr><td>pitch:</td><td class="sign" id="prop-pitch-sign"></td><td class="value" id="prop-pitch"></td></tr>
+          <tr><td>yaw:</td><td class="sign" id="prop-yaw-sign"></td><td class="value" id="prop-yaw"></td></tr>
+        </table>
+      </div>
+      
+      
+      
     </div>
     <div id="map-container">
       <div id="map"></div>
