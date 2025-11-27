@@ -63,8 +63,8 @@ function updateDroneProperties(droneId, x_ros, y_ros, z_ros, roll, pitch, yaw) {
 const map = L.map('map').setView([35.6812, 139.7671], 15); // 東京駅
 
 
-const ORIGIN_LAT = 35.6812;   // zone の原点（仮）
-const ORIGIN_LON = 139.7671;
+let ORIGIN_LAT = 35.6625;   // zone の原点（仮）
+let ORIGIN_LON = 139.70625;
 const TRAIL_KEEP_MS = 100_000; // 100秒だけ残す
 let followMode = true;        // 自動スクロールON/OFF
 const droneIcon = L.icon({
@@ -143,7 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const connectBtn = document.getElementById('connect-btn');
   const droneSelect = document.getElementById('drone-select');
   const followCheckbox = document.getElementById('follow-checkbox');
+  const latInput = document.getElementById('origin-lat');
+  const lonInput = document.getElementById('origin-lon');
+  const applyOriginBtn = document.getElementById('apply-origin-btn');
 
+  latInput.value = ORIGIN_LAT;
+  lonInput.value = ORIGIN_LON;
   // 機体セレクトの初期化
   if (droneSelect) {
     DRONE_CONFIGS.forEach(cfg => {
@@ -186,7 +191,25 @@ document.addEventListener('DOMContentLoaded', () => {
       connectBtn.textContent = 'disconnected';
     }
   });
+  if (applyOriginBtn) {
+    applyOriginBtn.addEventListener('click', () => {
+      const lat = parseFloat(latInput.value);
+      const lon = parseFloat(lonInput.value);
 
+      if (isNaN(lat) || isNaN(lon)) {
+        alert("緯度・経度の入力が正しくありません");
+        return;
+      }
+
+      ORIGIN_LAT = lat;
+      ORIGIN_LON = lon;
+
+      console.log("[HakoniwaViewer] New ORIGIN:", ORIGIN_LAT, ORIGIN_LON);
+
+      // マップの中心を変更
+      map.panTo([ORIGIN_LAT, ORIGIN_LON]);
+    });
+  }
   function startPduPolling() {
     setInterval(() => {
       Hakoniwa.withPdu((pdu) => {
