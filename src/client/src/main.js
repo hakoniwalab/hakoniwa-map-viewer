@@ -22,10 +22,20 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const state = Hakoniwa.getConnectionState();
         if (!state.isConnected) {
             const ok = await Hakoniwa.connect();
-            if (ok) connectBtn.textContent = 'connected';
+            if (ok) {
+                Hakoniwa.withPdu(async (pdu) => {
+                    const ret = await pdu.declare_pdu_for_read('Drone', 'pos');
+                    console.log("[HakoniwaViewer] PDU Data:", ret);
+                });
+                isConnected = true;
+                connectBtn.textContent = 'connected';
+            }
+            else {
+                connectBtn.textContent = 'disconnected';
+            }
         } else {
-        await Hakoniwa.disconnect();
-        connectBtn.textContent = 'disconnected';
+            await Hakoniwa.disconnect();
+            connectBtn.textContent = 'disconnected';
         }        
     });
 });

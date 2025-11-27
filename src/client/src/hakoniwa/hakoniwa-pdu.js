@@ -46,9 +46,9 @@ export const Hakoniwa = (() => {
 
     function withPdu(fn) {
         if (pduManager) {
-        fn(pduManager);
+            fn(pduManager);
         } else {
-        console.warn("[Hakoniwa] pduManager is not connected.");
+            console.warn("[Hakoniwa] pduManager is not connected.");
         }
     }
 
