@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 });
                 isConnected = true;
                 connectBtn.textContent = 'connected';
+                startPduPolling();
             }
             else {
                 connectBtn.textContent = 'disconnected';
@@ -38,4 +39,17 @@ document.addEventListener('DOMContentLoaded', (event) => {
             connectBtn.textContent = 'disconnected';
         }        
     });
+
+    function startPduPolling() {
+        setInterval(() => {
+            Hakoniwa.withPdu((pdu) => {
+                const buf = pdu.read_pdu_raw_data('Drone', 'pos');
+                if (buf) {
+                    console.log("[HakoniwaViewer] raw len:", buf.byteLength);
+                } else {
+                    console.log("[HakoniwaViewer] raw len: 0 (no buffer)");
+                }
+            });
+        }, 100);
+    }    
 });

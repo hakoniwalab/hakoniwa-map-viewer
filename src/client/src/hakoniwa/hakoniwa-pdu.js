@@ -13,7 +13,7 @@ export const Hakoniwa = (() => {
     // PDUマネージャ初期化関数
     async function initializePduManager() {
         // PDUマネージャ初期化
-        const websocketCommunicationService = new WebSocketCommunicationService(CONFIG.ws_uri, CONFIG.wire_version);
+        const websocketCommunicationService = new WebSocketCommunicationService(CONFIG.wire_version);
         const pduManager = new PduManager({ wire_version: CONFIG.wire_version });
         await pduManager.initialize(CONFIG.pdu_def_path, websocketCommunicationService);
         console.log("[HakoniwaViewer] PduManager initialized");
