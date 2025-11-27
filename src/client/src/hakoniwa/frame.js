@@ -1,10 +1,10 @@
 // src/client/src/hakoniwa/frame.js
-import proj4 from 'proj4';
+const proj4Ref = window.proj4;
 
 export const HakoniwaFrame = (() => {
   // EPSG:6677 を一度だけ登録
-  if (!proj4.defs["EPSG:6677"]) {
-    proj4.defs(
+  if (!proj4Ref.defs["EPSG:6677"]) {
+    proj4Ref.defs(
       "EPSG:6677",
       "+proj=tmerc +lat_0=36 +lon_0=139.8333333333333 " +
         "+k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs"
@@ -12,15 +12,15 @@ export const HakoniwaFrame = (() => {
   }
 
   function latlonToENU(originLat, originLon, lat, lon) {
-    const p0 = proj4("EPSG:4326", "EPSG:6677", [originLon, originLat]);
-    const p1 = proj4("EPSG:4326", "EPSG:6677", [lon, lat]);
+    const p0 = proj4Ref("EPSG:4326", "EPSG:6677", [originLon, originLat]);
+    const p1 = proj4Ref("EPSG:4326", "EPSG:6677", [lon, lat]);
     return [p1[0] - p0[0], p1[1] - p0[1]];
   }
 
   function ENUToLatLon(originLat, originLon, x, y) {
-    const p0 = proj4("EPSG:4326", "EPSG:6677", [originLon, originLat]);
+    const p0 = proj4Ref("EPSG:4326", "EPSG:6677", [originLon, originLat]);
     const p1 = [p0[0] + x, p0[1] + y];
-    const geo = proj4("EPSG:6677", "EPSG:4326", p1);
+    const geo = proj4Ref("EPSG:6677", "EPSG:4326", p1);
     return [geo[1], geo[0]];
   }
 

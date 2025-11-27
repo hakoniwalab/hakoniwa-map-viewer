@@ -4,13 +4,15 @@
   <meta charset="UTF-8" />
   <title>Hakoniwa Map Viewer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
 
   <!-- Leaflet CSS（integrity / crossorigin は削除） -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
-
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
   <style>
     html, body {
       margin: 0;
@@ -46,16 +48,15 @@
     <div id="panel">
       <!-- Buttons and properties will go here -->
       <button id="connect-btn">connect</button>
+      <label>
+        <input type="checkbox" id="follow-checkbox" checked>
+        Follow Drone
+      </label>
     </div>
     <div id="map-container">
       <div id="map"></div>
     </div>
   </div>
-
-  <!-- Leaflet JS（ここも integrity / crossorigin 消す） -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  ></script>
 
   <!-- Main app -->
   <script type="module" src="./src/main.js"></script>
