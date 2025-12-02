@@ -2,17 +2,29 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Hakoniwa Map Viewer</title>
+  <title>Hakoniwa Map + 3D Drone Viewer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
 
-  <!-- Leaflet CSS（integrity / crossorigin は削除） -->
+  <!-- proj4 & Leaflet -->
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
+
+  <!-- three.js 用 importmap -->
+  <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
   <style>
     html, body {
       margin: 0;
@@ -20,10 +32,13 @@
       height: 100%;
       overflow: hidden;
     }
+
     #main-container {
       display: flex;
       height: 100%;
     }
+
+    /* 左パネル */
     #panel {
       width: 300px;
       height: 100%;
@@ -32,31 +47,60 @@
       padding: 10px;
       box-sizing: border-box;
     }
-    #map-container {
+
+    /* 右側（縦2分割＋ドラッグバー） */
+    #right-container {
       flex: 1;
       height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
+
+    #map-container {
+      height: 50%;          /* 初期値: 半々 */
+      min-height: 80px;
+    }
+
     #map {
       width: 100%;
       height: 100%;
     }
 
+    /* ドラッグ用バー */
+    #splitter {
+      height: 6px;
+      background: #ccc;
+      cursor: row-resize;
+      flex-shrink: 0;
+    }
+
+    #three-container {
+      height: calc(50% - 6px);  /* 初期値 */
+      min-height: 80px;
+      background: #000;
+    }
+
+    #three-root {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* prop-table 周りは前のまま */
     .prop-table {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
       font-size: 13px;
       border-collapse: collapse;
       margin-bottom: 12px;
+      width: 100%;
     }
-
     .prop-table td {
       padding: 2px 4px;
     }
-
     .prop-table .sign {
       width: 12px;
       text-align: right;
     }
-
     .prop-table .value {
       width: 70px;
       text-align: right;
@@ -68,33 +112,24 @@
       padding: 6px 8px;
       margin-bottom: 16px;
     }
-
     .prop-box h4 {
       margin: 0 0 6px 0;
       font-size: 14px;
       font-weight: bold;
     }
-
-    .prop-table {
-      width: 100%;
-    }
-
   </style>
 </head>
 
 <body>
   <div id="main-container">
     <div id="panel">
-      <!-- 接続ボタン -->
       <button id="connect-btn">connect</button>
 
-      <!-- 機体選択 -->
       <div style="margin-top:8px;">
         <label for="drone-select"><strong>Drone</strong></label><br>
         <select id="drone-select"></select>
       </div>
 
-      <!-- Follow -->
       <div style="margin-top:4px;">
         <label>
           <input type="checkbox" id="follow-checkbox" checked>
@@ -105,7 +140,6 @@
       <hr>
 
       <h3>Origin (Lat/Lon)</h3>
-
       <div class="prop-box">
         <table class="prop-table">
           <tr>
@@ -117,13 +151,11 @@
             <td><input id="origin-lon" type="number" step="0.000001" style="width:120px;"></td>
           </tr>
         </table>
-
         <button id="apply-origin-btn">Apply</button>
       </div>
 
       <hr>
 
-      <!-- プロパティ表示 -->
       <h3>Drone State</h3>
       <div class="prop-box">
         <h4>Position (ROS, m)</h4>
@@ -142,16 +174,68 @@
           <tr><td>yaw:</td><td class="sign" id="prop-yaw-sign"></td><td class="value" id="prop-yaw"></td></tr>
         </table>
       </div>
-      
-      
-      
     </div>
-    <div id="map-container">
-      <div id="map"></div>
+
+    <div id="right-container">
+      <div id="map-container">
+        <div id="map"></div>
+      </div>
+      <div id="splitter"></div>
+      <div id="three-container">
+        <div id="three-root"></div>
+      </div>
     </div>
   </div>
 
-  <!-- Main app -->
+  <!-- Map viewer 用 -->
   <script type="module" src="./src/main.js"></script>
+
+  <!-- Three.js viewer 用 -->
+  <script type="module" src="./src_3d/app.js"></script>
+
+  <!-- レイアウト用ドラッグ処理 -->
+  <script>
+    (function() {
+      const right      = document.getElementById('right-container');
+      const mapC       = document.getElementById('map-container');
+      const threeC     = document.getElementById('three-container');
+      const splitter   = document.getElementById('splitter');
+
+      let dragging = false;
+
+      splitter.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        dragging = true;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+
+        const rect = right.getBoundingClientRect();
+        let offsetY = e.clientY - rect.top;
+
+        const splitterHeight = splitter.offsetHeight || 6;
+        const minTop = 80;                    // map の最小高さ
+        const maxTop = rect.height - 80;      // three の最小高さ
+
+        if (offsetY < minTop) offsetY = minTop;
+        if (offsetY > maxTop) offsetY = maxTop;
+
+        const mapHeight   = offsetY;
+        const threeHeight = rect.height - offsetY - splitterHeight;
+
+        mapC.style.height   = mapHeight   + 'px';
+        threeC.style.height = threeHeight + 'px';
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+
+        // レイアウト変更を通知（必要なら main.js / app.js で拾う）
+        window.dispatchEvent(new Event('hakoniwa-layout-changed'));
+      });
+    })();
+  </script>
 </body>
 </html>
