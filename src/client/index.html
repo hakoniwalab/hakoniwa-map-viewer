@@ -125,6 +125,17 @@
     <div id="panel">
       <button id="connect-btn">connect</button>
 
+      <div style="margin-top: 8px;">
+        <label for="ws-uri-input"><strong>WebSocket URI</strong></label><br>
+        <input
+          id="ws-uri-input"
+          type="text"
+          style="width: 100%;"
+          value="ws://127.0.0.1:8765"
+        >
+      </div>
+
+
       <div style="margin-top:8px;">
         <label for="drone-select"><strong>Drone</strong></label><br>
         <select id="drone-select"></select>
@@ -188,7 +199,7 @@
   </div>
 
   <!-- Map viewer 用 -->
-  <script type="module" src="./src/main.js"></script>
+  <script type="module" src="./src/ui.js"></script>
 
   <!-- Three.js viewer 用 -->
   <script type="module" src="/thirdparty/hakoniwa-threejs-drone/src/app.js"></script>
