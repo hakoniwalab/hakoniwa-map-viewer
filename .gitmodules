@@ -1,3 +1,6 @@
 [submodule "thirdparty/hakoniwa-pdu-javascript"]
 	path = thirdparty/hakoniwa-pdu-javascript
 	url = https://github.com/hakoniwalab/hakoniwa-pdu-javascript.git
+[submodule "thirdparty/hakoniwa-threejs-drone"]
+	path = thirdparty/hakoniwa-threejs-drone
+	url = https://github.com/hakoniwalab/hakoniwa-threejs-drone.git
