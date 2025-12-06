@@ -10,7 +10,7 @@ let currentDroneId = null;
 const map = L.map('map').setView([35.6812, 139.7671], 15); // 東京駅
 let ORIGIN_LAT = 35.6625;   // zone の原点（仮）
 let ORIGIN_LON = 139.70625;
-const TRAIL_KEEP_MS = 100_000; // 100秒だけ残す
+const TRAIL_KEEP_MS = 10000_000; // 10000秒だけ残す
 let followMode = true;        // 自動スクロールON/OFF
 const droneIcon = L.icon({
   iconUrl: '/images/drone.svg',
