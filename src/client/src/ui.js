@@ -171,11 +171,13 @@ document.addEventListener('DOMContentLoaded', () => {
     connectBtn.disabled = true;
     connectBtn.textContent = "connecting...";
     const wsUriInput = document.getElementById('ws-uri-input');
+    const pduConfigInput = document.getElementById('pdu-config-input');
+    const droneConfigInput = document.getElementById('drone-config-input');
 
     try {
       const wsUri = (wsUriInput?.value || "").trim() || "ws://127.0.0.1:8765";
       Hakoniwa.configure({
-        pdu_def_path: "/config/pdudef.json",   // 必要なら変更
+        pdu_def_path: (pduConfigInput?.value || "").trim() || "/config/pdudef-1.json",   // 必要なら変更
         ws_uri: wsUri,              // 別ホストにもできる
         wire_version: "v1",
       });

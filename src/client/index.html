@@ -133,6 +133,20 @@
           style="width: 100%;"
           value="ws://127.0.0.1:8765"
         >
+        <label for="pdu-config-input"><strong>PDU Config Path</strong></label><br>
+        <input
+          id="pdu-config-input"
+          type="text"
+          style="width: 100%; margin-top:4px;"
+          value="/config/pdudef-1.json"
+        >
+        <label for=""drone-config-input><strong>Drone Config Path</strong></label><br>
+        <input
+          id="drone-config-input"
+          type="text"
+          style="width: 100%; margin-top:4px;"
+          value="/config/drone_config-1.json"
+        >
       </div>
 
 
@@ -201,8 +215,6 @@
   <!-- Map viewer 用 -->
   <script type="module" src="./src/ui.js"></script>
 
-  <!-- Three.js viewer 用 -->
-  <script type="module" src="/thirdparty/hakoniwa-threejs-drone/src/app.js"></script>
 
   <!-- レイアウト用ドラッグ処理 -->
   <script>
@@ -247,6 +259,13 @@
         window.dispatchEvent(new Event('hakoniwa-layout-changed'));
       });
     })();
+    import { main } from "/thirdparty/hakoniwa-threejs-drone/src/app.js";
+
+    const droneConfigPath =
+      document.getElementById('drone-config-input')?.value
+      || "/config/drone_config-1.json";
+
+    main(droneConfigPath).catch(e => console.error(e));
   </script>
 </body>
 </html>
