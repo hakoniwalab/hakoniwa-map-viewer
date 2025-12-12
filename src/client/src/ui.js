@@ -1,5 +1,5 @@
 import { Hakoniwa } from '/thirdparty/hakoniwa-threejs-drone/src/hakoniwa/hakoniwa-pdu.js';
-import { getDrones } from "/thirdparty/hakoniwa-threejs-drone/src/app.js";
+import { main, getDrones, focusDroneById } from "/thirdparty/hakoniwa-threejs-drone/src/app.js";
 import { HakoniwaFrame } from './frame.js';
 
 console.log("[HakoniwaViewer] main.js loaded");
@@ -121,6 +121,8 @@ function updateDroneTrail(droneId, lat, lon) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
+  const droneCountSelect = document.getElementById('drone-count');
+  const wsUriInput = document.getElementById('ws-uri-input');
   const connectBtn = document.getElementById('connect-btn');
   const droneSelect = document.getElementById("drone-select");
   const followCheckbox = document.getElementById('follow-checkbox');
@@ -149,6 +151,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   droneSelect.addEventListener("change", () => {
     currentDroneId = droneSelect.value;
+
+    focusDroneById(currentDroneId);
+
+    if (followMode) {
+      const st = drones.get(String(currentDroneId));
+      if (st?.marker) map.panTo(st.marker.getLatLng());
+    }
   });
   // --- 選択中ドローンを取得 ---
   function getSelectedDrone() {
@@ -168,34 +177,41 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   connectBtn.addEventListener('click', async () => {
+    let started = false;
     connectBtn.disabled = true;
     connectBtn.textContent = "connecting...";
-    const wsUriInput = document.getElementById('ws-uri-input');
-    const pduConfigInput = document.getElementById('pdu-config-input');
-    const droneConfigInput = document.getElementById('drone-config-input');
+    const wsUri = (document.getElementById('ws-uri-input')?.value || "").trim() || "ws://127.0.0.1:8765";
+    const droneCount = Number(document.getElementById('drone-count')?.value || 1);
+
+    const pduDefPath   = droneCount === 2 ? "/config/pdudef-2.json"        : "/config/pdudef-1.json";
+    const droneCfgPath = droneCount === 2 ? "/config/drone_config-2.json" : "/config/drone_config-1.json";
 
     try {
-      const wsUri = (wsUriInput?.value || "").trim() || "ws://127.0.0.1:8765";
+      // ① three.js シーン構築（初回だけ）
+      if (!started) {
+        await main(droneCfgPath);
+        started = true;
+        populateDroneSelect();     // drones ができてから
+        focusDroneById(currentDroneId); // 初期フォーカス
+      }
+      // ② PDU 接続
+      connectBtn.textContent = "connecting...";
       Hakoniwa.configure({
-        pdu_def_path: (pduConfigInput?.value || "").trim() || "/config/pdudef-1.json",   // 必要なら変更
-        ws_uri: wsUri,              // 別ホストにもできる
+        pdu_def_path: pduDefPath,
+        ws_uri: wsUri,
         wire_version: "v1",
       });
       const ok = await Hakoniwa.connect();
-      if (ok) {
-        let drones = getDrones();
-        for (let i = 0; i < drones.length; i++) {
-          const drone = drones[i];
-          drone.initPdu();  // Drone ごとに PDU 初期化＋ポーリング開始
-        }
+      if (!ok) throw new Error("Hakoniwa.connect() failed");
 
-        populateDroneSelect();
-        connectBtn.textContent = "connected";
-        startPduPolling();
-      } else {
-        connectBtn.textContent = "connect failed";
-        connectBtn.disabled = false;
+      // ③ 各 Drone の PDU 初期化
+      for (const drone of getDrones()) {
+        await drone.initPdu();
       }
+      droneCountSelect.disabled = true;
+      wsUriInput.disabled = true; 
+      connectBtn.textContent = "connected";
+      startPduPolling();
     } catch (e) {
       console.error(e);
       connectBtn.textContent = "error";
