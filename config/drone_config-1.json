@@ -2,7 +2,7 @@
   "environments": [
     {
       "name": "town",
-      "model": "/assets/models/13113_shibuya-ku_pref_2023_citygml_2_op.glb",
+      "model": "/assets/models/floor.glb",
       "pos": [0, 0, -15.04],
       "hpr": [0, 0, 180]
     }
@@ -25,56 +25,56 @@
       "pos": [0.0, 0.0, 0.0],
       "hpr": [0.0, 0.0, 0.0],
       "model": {
-        "model_path": "/assets/models/drone.glb",
+        "model_path": "/assets/models/drone-frame.glb",
         "pos": [0, 0, 0.01],
-        "hpr": [0, -90, 180]
+        "hpr": [0, 0, 180]
       },
       "rotors": [
         {
           "name": "drone_rotor1",
           "model": {
-            "model_path": "/assets/models/prop-2.glb",
+            "model_path": "/assets/models/drone-prop.glb",
             "pos": [0.0, 0.0, 0.0],
-            "hpr": [0, -90, 0]
+            "hpr": [0, 0, 0]
           },
-          "pos": [0.065, 0.055, 0.0],
+          "pos": [0.235, 0.19, 0.03],
           "hpr": [0, 0, 0]
         },
         {
           "name": "drone_rotor2",
           "model": {
-            "model_path": "/assets/models/prop-1.glb",
+            "model_path": "/assets/models/drone-prop.glb",
             "pos": [0.0, 0.0, 0.0],
-            "hpr": [0, -90, 0]
+            "hpr": [0, 0, 0]
           },
-          "pos": [0.065, -0.055, 0.0],
+          "pos": [0.235, -0.19, 0.03],
           "hpr": [0, 0, 0]
         },
         {
           "name": "drone_rotor3",
           "model": {
-            "model_path": "/assets/models/prop-1.glb",
+            "model_path": "/assets/models/drone-prop.glb",
             "pos": [0.0, 0.0, 0.0],
-            "hpr": [0, -90, 0]
+            "hpr": [0, 0, 0]
           },
-          "pos": [-0.025, -0.055, 0.0],
+          "pos": [-0.235, -0.19, 0.03],
           "hpr": [0, 0, 0]
         },
         {
           "name": "drone_rotor4",
           "model": {
-            "model_path": "/assets/models/prop-1.glb",
+            "model_path": "/assets/models/drone-prop.glb",
             "pos": [0.0, 0.0, 0.0],
-            "hpr": [0, -90, 0]
+            "hpr": [0, 0, 0]
           },
-          "pos": [-0.025, 0.055, 0.0],
+          "pos": [-0.235, 0.19, 0.03],
           "hpr": [0, 0, 0]
         }
       ],
       "cameras": [
         {
           "name": "front_camera",
-          "pos": [0.1, 0.0, 0.01],
+          "pos": [0.15, 0.0, -0.01],
           "hpr": [0, 0, 0],
           "fov": 90,
           "near": 0.1,
@@ -87,9 +87,9 @@
           },
           "sort": 20,
           "model": {
-            "model_path": "/assets/models/camera.glb",
+            "model_path": "/assets/models/drone-camera.glb",
             "pos": [0.0, 0.0, 0.0],
-            "hpr": [0, 90, 0]
+            "hpr": [0, 0, 180]
           }
         }
       ]
