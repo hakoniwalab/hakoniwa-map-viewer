@@ -3,7 +3,7 @@
     {
       "name": "town",
       "model": "/assets/models/floor.glb",
-      "pos": [0, 0, -15.04],
+      "pos": [0, 0, -0.01],
       "hpr": [0, 0, 180]
     }
   ],
