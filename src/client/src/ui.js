@@ -183,8 +183,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const wsUri = (document.getElementById('ws-uri-input')?.value || "").trim() || "ws://127.0.0.1:8765";
     const droneCount = Number(document.getElementById('drone-count')?.value || 1);
 
-    const pduDefPath   = droneCount === 2 ? "/config/pdudef-2.json"        : "/config/pdudef-1.json";
-    const droneCfgPath = droneCount === 2 ? "/config/drone_config-2.json" : "/config/drone_config-1.json";
+    let pduDefPath   = "/config/pdudef-1.json";
+    let droneCfgPath = "/config/drone_config-shibuya-1.json";
+    if (droneCount === 2) {
+      pduDefPath = "/config/pdudef-2.json";
+      droneCfgPath = "/config/drone_config-shibuya-2.json";
+    } else if (droneCount === 10) {
+      pduDefPath = "/config/pdudef-10.json";
+      droneCfgPath = "/config/drone_config-shibuya-10.json";
+    }
 
     try {
       // ① three.js シーン構築（初回だけ）
