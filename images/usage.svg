@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" fill="#ffffff"/>
+  <text x="40" y="80" font-size="42" font-family="sans-serif" fill="#1f3a5f">ブラウザでの飛行状態の確認方法</text>
+  <rect x="40" y="120" width="520" height="480" rx="12" fill="#f5f5f5" stroke="#c0c0c0" stroke-width="2"/>
+  <text x="70" y="180" font-size="24" font-family="sans-serif" fill="#1f3a5f">1. Drone Count を指定</text>
+  <text x="70" y="230" font-size="24" font-family="sans-serif" fill="#1f3a5f">2. connect をクリック</text>
+  <text x="70" y="280" font-size="24" font-family="sans-serif" fill="#1f3a5f">3. ドローン状態を確認</text>
+  <rect x="620" y="140" width="520" height="420" rx="12" fill="#e8f1ff" stroke="#7aa2e6" stroke-width="2"/>
+  <text x="650" y="190" font-size="24" font-family="sans-serif" fill="#1f3a5f">地図ビュー (leaflet)</text>
+  <rect x="650" y="220" width="460" height="190" rx="8" fill="#cfe0ff"/>
+  <circle cx="870" cy="315" r="10" fill="#ff5252"/>
+  <text x="650" y="450" font-size="24" font-family="sans-serif" fill="#1f3a5f">3Dビュー (three.js)</text>
+  <rect x="650" y="480" width="460" height="70" rx="8" fill="#1b1b1b"/>
+  <circle cx="710" cy="515" r="12" fill="#b0c4ff"/>
+  <rect x="740" y="500" width="120" height="30" rx="4" fill="#3b3b3b"/>
+  <text x="650" y="610" font-size="20" font-family="sans-serif" fill="#6b6b6b">地図と3Dビューでドローン状態を確認できます</text>
+</svg>
