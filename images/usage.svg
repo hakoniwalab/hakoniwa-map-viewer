@@ -6,8 +6,12 @@
   <text x="70" y="230" font-size="24" font-family="sans-serif" fill="#1f3a5f">2. connect をクリック</text>
   <text x="70" y="280" font-size="24" font-family="sans-serif" fill="#1f3a5f">3. ドローン状態を確認</text>
   <rect x="620" y="140" width="520" height="420" rx="12" fill="#e8f1ff" stroke="#7aa2e6" stroke-width="2"/>
-  <text x="650" y="200" font-size="24" font-family="sans-serif" fill="#1f3a5f">地図ビュー (leaflet)</text>
-  <rect x="650" y="240" width="460" height="290" rx="8" fill="#cfe0ff"/>
-  <circle cx="870" cy="380" r="10" fill="#ff5252"/>
-  <text x="650" y="610" font-size="20" font-family="sans-serif" fill="#6b6b6b">ドローン位置が地図上に表示されます</text>
+  <text x="650" y="190" font-size="24" font-family="sans-serif" fill="#1f3a5f">地図ビュー (leaflet)</text>
+  <rect x="650" y="220" width="460" height="190" rx="8" fill="#cfe0ff"/>
+  <circle cx="870" cy="315" r="10" fill="#ff5252"/>
+  <text x="650" y="450" font-size="24" font-family="sans-serif" fill="#1f3a5f">3Dビュー (three.js)</text>
+  <rect x="650" y="480" width="460" height="70" rx="8" fill="#1b1b1b"/>
+  <circle cx="710" cy="515" r="12" fill="#b0c4ff"/>
+  <rect x="740" y="500" width="120" height="30" rx="4" fill="#3b3b3b"/>
+  <text x="650" y="610" font-size="20" font-family="sans-serif" fill="#6b6b6b">地図と3Dビューでドローン状態を確認できます</text>
 </svg>
