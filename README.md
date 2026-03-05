@@ -105,8 +105,25 @@ git clone --recursive https://github.com/hakoniwalab/hakoniwa-envsim.git
 1. 箱庭ドローンシミュレーションを起動します。
 2. `waiting for webserver` のログが表示されたら、ブラウザで次のURLにアクセスします。
    * `http://localhost:8001/src/client/index.html`
-3. 画面内の **Drone Count** でドローン数を選択します。
-4. **connect** をクリックすると、ドローンの状態が可視化されます。
+3. **connect** をクリックすると、ドローンの状態が可視化されます。
+
+### threejs 参照先の切替（開発向け）
+
+map-viewer は URL クエリ `threejsRoot` で threejs 実装の参照先を切替できます。  
+未指定時は既定で `/thirdparty/hakoniwa-threejs-drone` を参照します。
+また、`viewerConfigName` で threejs 側の上位設定ファイル名を指定できます。
+
+例:
+- 既定（submodule）:
+  - `http://localhost:8001/src/client/index.html`
+- 一時的に別配置を参照:
+  - `http://localhost:8001/src/client/index.html?threejsRoot=/work/hakoniwa-threejs-drone`
+- fleets 設定を明示:
+  - `http://localhost:8001/src/client/index.html?threejsRoot=/work/hakoniwa-threejs-drone&viewerConfigName=viewer-config-fleets.json`
+
+注意:
+- `threejsRoot` は **ブラウザ配信ルートから見えるパス** である必要があります。
+- 配信ルート外のディレクトリはそのままでは参照できません（必要ならシンボリックリンク等で公開パス配下に置く）。
 
 ![ブラウザでの飛行状態の確認方法](images/usage.svg)
 
@@ -136,4 +153,3 @@ cd hakoniwa-drone-core
 - 他のコンフィグファイルを指定することで、異なるシミュレーションを実行できます。
   - 2台同時の場合： `docker-api-mujoco-shibuya-2.json`
   - 10台同時の場合： `docker-api-mujoco-shibuya-10.json`
-

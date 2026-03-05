@@ -1,10 +1,76 @@
-import { Hakoniwa } from '/thirdparty/hakoniwa-threejs-drone/src/hakoniwa/hakoniwa-pdu.js';
-import { main, getDrones, focusDroneById } from "/thirdparty/hakoniwa-threejs-drone/src/app.js";
 import { HakoniwaFrame } from './frame.js';
 
 console.log("[HakoniwaViewer] main.js loaded");
 const drones = new Map();
 let currentDroneId = null;
+const DEFAULT_THREEJS_ROOT = "/thirdparty/hakoniwa-threejs-drone";
+const DEFAULT_VIEWER_CONFIG_NAME = "viewer-config-legacy.json";
+
+function getThreejsRootFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const root = params.get("threejsRoot");
+  if (!root || root.trim().length === 0) {
+    return DEFAULT_THREEJS_ROOT;
+  }
+  return root.endsWith("/") ? root.slice(0, -1) : root;
+}
+
+function getViewerConfigNameFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const name = params.get("viewerConfigName");
+  if (!name || name.trim().length === 0) {
+    return DEFAULT_VIEWER_CONFIG_NAME;
+  }
+  return name;
+}
+
+function resolveByBase(baseUrl, pathValue) {
+  const absoluteBase = new URL(baseUrl, window.location.href).toString();
+  return new URL(pathValue, absoluteBase).toString();
+}
+
+function resolvePathForThreejsRoot(threejsRoot, configUrl, pathValue) {
+  if (typeof pathValue !== "string" || pathValue.length === 0) {
+    return pathValue;
+  }
+  if (pathValue.startsWith("/")) {
+    return new URL(`${threejsRoot}${pathValue}`, window.location.href).toString();
+  }
+  return resolveByBase(configUrl, pathValue);
+}
+
+async function loadThreejsViewerConfig(threejsRoot, viewerConfigName) {
+  const configUrl = new URL(`${threejsRoot}/config/${viewerConfigName}`, window.location.href).toString();
+  const res = await fetch(configUrl);
+  if (!res.ok) {
+    throw new Error(`[HakoniwaViewer] failed to load threejs viewer config: ${configUrl}`);
+  }
+  const cfg = await res.json();
+  if (!cfg?.three?.sceneConfigPath || !cfg?.pdu?.pduDefPath) {
+    throw new Error(`[HakoniwaViewer] invalid viewer config: ${configUrl}`);
+  }
+  const resolvedSceneConfigPath = resolvePathForThreejsRoot(threejsRoot, configUrl, cfg.three.sceneConfigPath);
+  const resolvedPduDefPath = resolvePathForThreejsRoot(threejsRoot, configUrl, cfg.pdu.pduDefPath);
+  const normalizedConfig = JSON.parse(JSON.stringify(cfg));
+  normalizedConfig.three.sceneConfigPath = resolvedSceneConfigPath;
+  normalizedConfig.pdu.pduDefPath = resolvedPduDefPath;
+  return {
+    configUrl,
+    config: normalizedConfig,
+    sceneConfigPath: resolvedSceneConfigPath,
+    pduDefPath: resolvedPduDefPath,
+    wireVersion: cfg?.pdu?.wireVersion ?? "v2",
+    wsUri: cfg?.pdu?.wsUri ?? "ws://127.0.0.1:8765",
+  };
+}
+
+async function loadThreejsModules(threejsRoot) {
+  const viewerModulePath = `${threejsRoot}/src/public/drone_viewer.js`;
+  const viewerModule = await import(viewerModulePath);
+  return {
+    createDroneViewer: viewerModule.createDroneViewer,
+  };
+}
 
 // マップ初期化
 const map = L.map('map').setView([35.6812, 139.7671], 15); // 東京駅
@@ -121,8 +187,11 @@ function updateDroneTrail(droneId, lat, lon) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-  const droneCountSelect = document.getElementById('drone-count');
+  let viewer = null;
+  let started = false;
+
   const wsUriInput = document.getElementById('ws-uri-input');
+  const viewerConfigNameInput = document.getElementById('viewer-config-name');
   const connectBtn = document.getElementById('connect-btn');
   const droneSelect = document.getElementById("drone-select");
   const followCheckbox = document.getElementById('follow-checkbox');
@@ -134,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
   lonInput.value = ORIGIN_LON;
 
   function populateDroneSelect() {
-    const ds = getDrones();
+    const ds = viewer ? viewer.getDrones() : [];
     droneSelect.innerHTML = "";
 
     ds.forEach((drone, index) => {
@@ -152,7 +221,9 @@ document.addEventListener('DOMContentLoaded', () => {
   droneSelect.addEventListener("change", () => {
     currentDroneId = droneSelect.value;
 
-    focusDroneById(currentDroneId);
+    if (viewer) {
+      viewer.focusDroneById(currentDroneId);
+    }
 
     if (followMode) {
       const st = drones.get(String(currentDroneId));
@@ -161,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   // --- 選択中ドローンを取得 ---
   function getSelectedDrone() {
-    const drones = getDrones();
+    const drones = viewer ? viewer.getDrones() : [];
     if (!drones.length) return null;
 
     const selId = droneSelect.value;
@@ -177,46 +248,49 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   connectBtn.addEventListener('click', async () => {
-    let started = false;
     connectBtn.disabled = true;
     connectBtn.textContent = "connecting...";
     const wsUri = (document.getElementById('ws-uri-input')?.value || "").trim() || "ws://127.0.0.1:8765";
-    const droneCount = Number(document.getElementById('drone-count')?.value || 1);
-
-    let pduDefPath   = "/config/pdudef-1.json";
-    let droneCfgPath = "/config/drone_config-shibuya-1.json";
-    if (droneCount === 2) {
-      pduDefPath = "/config/pdudef-2.json";
-      droneCfgPath = "/config/drone_config-shibuya-2.json";
-    } else if (droneCount === 10) {
-      pduDefPath = "/config/pdudef-10.json";
-      droneCfgPath = "/config/drone_config-shibuya-10.json";
-    }
 
     try {
-      // ① three.js シーン構築（初回だけ）
+      if (!viewer) {
+        const threejsRoot = getThreejsRootFromQuery();
+        const viewerConfigName = getViewerConfigNameFromQuery();
+        const modules = await loadThreejsModules(threejsRoot);
+        const viewerConfig = await loadThreejsViewerConfig(threejsRoot, viewerConfigName);
+        viewer = modules.createDroneViewer();
+        viewer.configure(viewerConfig.config);
+        console.log("[HakoniwaViewer] threejsRoot:", threejsRoot);
+        console.log("[HakoniwaViewer] viewerConfig:", viewerConfig.configUrl, viewerConfig.config);
+        await viewer.initialize({
+          droneConfigPath: viewerConfig.sceneConfigPath,
+        });
+        if (viewerConfigNameInput) {
+          viewerConfigNameInput.value = viewerConfigName;
+        }
+        if (wsUriInput && (!wsUriInput.value || wsUriInput.value.trim().length === 0)) {
+          wsUriInput.value = viewerConfig.wsUri;
+        }
+      }
       if (!started) {
-        await main(droneCfgPath);
         started = true;
-        populateDroneSelect();     // drones ができてから
-        focusDroneById(currentDroneId); // 初期フォーカス
+        populateDroneSelect();
+        viewer.setFollowSelectedEnabled(followMode);
+        if (currentDroneId && viewer) {
+          viewer.focusDroneById(currentDroneId);
+        }
       }
       // ② PDU 接続
       connectBtn.textContent = "connecting...";
-      Hakoniwa.configure({
-        pdu_def_path: pduDefPath,
-        ws_uri: wsUri,
-        wire_version: "v1",
-      });
-      const ok = await Hakoniwa.connect();
+      const ok = await viewer.connectPdu({ wsUri });
       if (!ok) throw new Error("Hakoniwa.connect() failed");
 
       // ③ 各 Drone の PDU 初期化
-      for (const drone of getDrones()) {
-        await drone.initPdu();
-      }
-      droneCountSelect.disabled = true;
+      await viewer.initDronePdu();
       wsUriInput.disabled = true; 
+      if (viewerConfigNameInput) {
+        viewerConfigNameInput.disabled = true;
+      }
       connectBtn.textContent = "connected";
       startPduPolling();
     } catch (e) {
@@ -246,11 +320,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   followCheckbox.addEventListener('change', () => {
     followMode = followCheckbox.checked;
+    if (viewer) {
+      viewer.setFollowSelectedEnabled(followMode);
+    }
   });
 
   function startPduPolling() {
     setInterval(() => {
-      const drones = getDrones();
+      if (!viewer) return;
+      const drones = viewer.getDrones();
       drones.forEach(drone => {
         if (!drone.latestPose) return;
         const [rosX, rosY, rosZ] = drone.latestPose.rosPos;
