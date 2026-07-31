@@ -53,12 +53,13 @@ class MapViewerContractTest(unittest.TestCase):
         self.assertIn("13113_shibuya-ku_pref_2023_citygml_2_op.glb", readme)
         self.assertIn("標準起動には不要", readme)
 
-    def test_optional_plateau_asset_is_not_required_by_repository(self) -> None:
-        # The large Shibuya GLB is distributed separately and must not become a
-        # required checkout artifact for doctor, test, or smoke.
-        self.assertFalse(
-            (ROOT / "13113_shibuya-ku_pref_2023_citygml_2_op.glb").is_file()
-        )
+    def test_optional_plateau_asset_is_not_required_by_doctor(self) -> None:
+        hako = self.read("tools/hako.py")
+        required_section = hako.split("REQUIRED_FILES =", 1)[1].split(
+            "def _display", 1
+        )[0]
+        self.assertNotIn("SHIBUYA_GLB", required_section)
+        self.assertIn("optional PLATEAU Shibuya GLB", hako)
 
 
 if __name__ == "__main__":
