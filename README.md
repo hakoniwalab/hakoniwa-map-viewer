@@ -1,155 +1,194 @@
 # 箱庭ドローン Map Viewer
 
-箱庭ドローンシミュレータと連携し、  
-**PLATEAU都市データ上でのドローン飛行を、地図および3Dビューでリアルタイムに可視化する** ブラウザビューアです。
+箱庭ドローンの状態を、Leafletの地図表示とThree.jsの3D表示で同時に監視するブラウザビューアです。
 
-## 想定ユーザー
+本リポジトリは、ドローン物理やWebSocketブリッジを実行するランタイムではありません。互換性のあるWebSocket状態配信を受け取り、地図・飛行軌跡・位置姿勢・3Dシーンを一つの画面へ統合します。
 
-* 箱庭ドローンのリアルタイム監視用ブラウザの利用者
+## 現在のアーキテクチャ
 
-## 前提条件
+```text
+Hakoniwa Drone / state publisher
+              |
+              v
+      shared-memory PDU
+              |
+              v
+hakoniwa-pdu-bridge-core WebBridge
+              |
+              v
+          WebSocket
+              |
+              v
+      hakoniwa-map-viewer
+        |             |
+        v             v
+   Leaflet map   hakoniwa-threejs-drone
+```
 
-[箱庭ドローンシミュレータ](https://github.com/toppers/hakoniwa-drone-core)の[コンテナパターン](https://github.com/toppers/hakoniwa-drone-core/blob/main/docs/getting_started/container.md)のアーキテクチャを前提とします。
+`hakoniwa-threejs-drone`は`thirdparty/hakoniwa-threejs-drone`のsubmoduleとして利用します。map-viewerは、その公開APIである`createDroneViewer()`を呼び出し、地図UIと3Dビューを統合します。
 
-## リポジトリのクローン
+## 責任範囲
 
-以下のリポジトリを、同一ディレクトリ直下でクローンします。
+map-viewerが担当するもの:
 
-※ これらのリポジトリは、コンテナパターンにおいて相互に連携するため、同一ディレクトリ配下に配置してください。
+- Leaflet地図とThree.jsシーンの統合表示
+- ドローンの選択、追従、位置姿勢、飛行軌跡の表示
+- ROS座標からENU、緯度経度への表示用変換
+- `threejsRoot`および`viewerConfigName`によるThree.js設定の選択
+- PLATEAU渋谷GLBの配布場所と利用案内
 
+map-viewerが担当しないもの:
 
-ブラウザ（可視化）：
+- ドローンの物理計算、飛行制御、センサ計算
+- `DroneVisualStateArray`などの状態生成
+- shared-memory PDUからWebSocketへの変換
+- 風、GPS強度、温度などの環境モデル生成
+- シミュレーション全体のLauncherとライフサイクル管理
+
+これらは、`hakoniwa-drone-core`、`hakoniwa-pdu-bridge-core`、`hakoniwa-envsim`、またはHakoniwa Business PackのRecipeが担当します。
+
+## セットアップ
+
+submoduleを含めてクローンします。
+
 ```bash
 git clone --recursive https://github.com/hakoniwalab/hakoniwa-map-viewer.git
+cd hakoniwa-map-viewer
 ```
 
-箱庭Webサーバー：
+既にクローン済みの場合は、submoduleを再帰的に初期化してください。
+
 ```bash
-git clone --recursive https://github.com/toppers/hakoniwa-webserver.git
+git submodule update --init --recursive
 ```
 
-箱庭ドローンシミュレータ：
+## component-owned validation
+
+map-viewerは、静的Webコンポーネントとして意味のある3つの標準操作を`tools/hako.py`で提供します。
+
 ```bash
-git clone --recursive https://github.com/toppers/hakoniwa-drone-core.git
+python tools/hako.py doctor
+python tools/hako.py test
+python tools/hako.py smoke
 ```
 
-環境データのブラウザ(設定)・環境シミュレーション/：
-```bash
-git clone --recursive https://github.com/hakoniwalab/hakoniwa-envsim.git
+- `doctor`: Python、map-viewer必須ファイル、再帰submodule、内包Three.js Viewerの準備状態を確認します。
+- `test`: 地図・座標変換・Three.js公開API・READMEの静的契約を検証し、内包Three.js Viewerのテストも実行します。
+- `smoke`: 一時HTTPサーバーを起動し、地図UI、座標変換、Three.js Viewer、PDU JavaScriptまで実際に取得します。
+
+このリポジトリにはネイティブな生成物がないため、`configure`、`build`、`install`は提供しません。
+
+`smoke`は静的配信構造を検証します。実際のWebSocket状態更新とブラウザ描画は、互換性のあるE2Eランタイムで確認してください。
+
+## 起動
+
+まず、WebBridgeを含む互換性のあるHakoniwaランタイムを起動します。現在の基準構成はHakoniwa Business Packの次のRecipeです。
+
+```text
+drone-single-mujoco-threejs-gamepad
 ```
 
-## コンテナパターンのアーキテクチャ
+このRecipeは、Drone service、DroneVisualStatePublisher、shared-memory PDU、WebBridge、WebSocket、Three.js Viewerの経路を一つのLauncherで構成します。map-viewerは同じWebSocket経路へ接続する上位表示として利用できます。
 
-### 動作環境
+次に、map-viewerのリポジトリルートをHTTP配信します。
 
-* OS
-  * Windows 11 WSL2
-* Docker
-  * WSL2上で動作するDockerを利用します。
-* ブラウザ
-  * Google Chrome / Microsoft Edge / Firefox / Safari
-
-
-### 全体アーキテクチャ
-
-![architecture](/images/architecture.png)
-
-構成としては、「箱庭」部分が Docker コンテナで動作し、「ブラウザ」部分がホストOS上のブラウザで動作します。
-
-#### PLATEAU(都市データ)
-
-都市データは、PLATEAUオープンデータを利用しています。
-サンプルとして、渋谷エリア(緯度経度：35.6625, 139.70625)の3D都市モデルデータを以下で提供しています。
-
-- https://github.com/hakoniwalab/hakoniwa-map-viewer/releases
-  - 13113_shibuya-ku_pref_2023_citygml_2_op.glb (約100MB)
-
-上記データをダウンロードし、クローンしたリポジトリの `hakoniwa-map-viewer/assets/models/` 配下に配置してください。
-
-### 箱庭
-
-箱庭は、箱庭ドローンシミュレータおよび環境シミュレータ、箱庭Webサーバー、箱庭ドローン飛行制御を実行する統合ランタイムです。
-
-インストールの手間を省くため、Docker コンテナとして提供しています。
-
-箱庭の docker 環境のセットアップは、以下を参照ください。
-- https://github.com/toppers/hakoniwa-drone-core/blob/main/docs/tips/wsl/docker-setup.md
-
-### ブラウザ(設定)
-
-環境データ作成およびドローンの移動ルートのデータは、JSONファイル形式で定義する必要があります。ただ、JSONファイルを直接編集するのは手間がかかるため、ブラウザ上で設定できるようにしたものが「箱庭ブラウザ(設定)」です。
-
-詳細は、以下を参照ください。
-
-- https://github.com/hakoniwalab/hakoniwa-envsim
-
-
-### ブラウザ(可視化)
-
-本リポジトリであり、箱庭ドローンシミュレータと連携し、ブラウザ上でドローンの移動状況をリアルタイムに可視化するビューアです。
-
-#### 技術スタック
-* **three.js**: 3Dビューでのドローン表示
-* **leaflet**: オープンストリートマップ上でのドローン移動表示
-* **箱庭Webクライアント**:  
-  箱庭Webサーバー経由で、シミュレータとWebSocket通信を行うクライアントライブラリ
-
-## 全体の起動手順（概要）
-
-1. 箱庭ドローンシミュレータ（Docker）を起動  
-2. 箱庭Webサーバーが起動し、`waiting for webserver` を確認  
-3. ブラウザ（可視化）にアクセス  
-
-## 使い方
-
-1. 箱庭ドローンシミュレーションを起動します。
-2. `waiting for webserver` のログが表示されたら、ブラウザで次のURLにアクセスします。
-   * `http://localhost:8001/src/client/index.html`
-3. **connect** をクリックすると、ドローンの状態が可視化されます。
-
-### threejs 参照先の切替（開発向け）
-
-map-viewer は URL クエリ `threejsRoot` で threejs 実装の参照先を切替できます。  
-未指定時は既定で `/thirdparty/hakoniwa-threejs-drone` を参照します。
-また、`viewerConfigName` で threejs 側の上位設定ファイル名を指定できます。
-
-例:
-- 既定（submodule）:
-  - `http://localhost:8001/src/client/index.html`
-- 一時的に別配置を参照:
-  - `http://localhost:8001/src/client/index.html?threejsRoot=/work/hakoniwa-threejs-drone`
-- fleets 設定を明示:
-  - `http://localhost:8001/src/client/index.html?threejsRoot=/work/hakoniwa-threejs-drone&viewerConfigName=viewer-config-fleets.json`
-
-注意:
-- `threejsRoot` は **ブラウザ配信ルートから見えるパス** である必要があります。
-- 配信ルート外のディレクトリはそのままでは参照できません（必要ならシンボリックリンク等で公開パス配下に置く）。
-
-![ブラウザでの飛行状態の確認方法](images/usage.svg)
-
-### 箱庭ドローンシミュレータの起動方法
-
-docker コンテナとして提供されている箱庭ドローンシミュレータを起動するには、以下のコマンドを実行します。
 ```bash
-bash hakoniwa-drone-core/docker/run.bash
+python -m http.server 8001
 ```
 
-```bash
-cd hakoniwa-drone-core
+ブラウザで次を開きます。
+
+```text
+http://127.0.0.1:8001/src/client/index.html
 ```
 
-その後、以下のコマンドで箱庭ドローンシミュレータを起動します。
+画面内のWebSocket URIを確認し、`connect`を押してください。既定値は`ws://127.0.0.1:8765`です。
+
+## Three.js設定の切替
+
+map-viewerは、URLクエリでThree.js実装とViewer設定を切り替えられます。
+
+既定のsubmoduleを使用:
+
+```text
+http://127.0.0.1:8001/src/client/index.html
+```
+
+fleets設定を使用:
+
+```text
+http://127.0.0.1:8001/src/client/index.html?viewerConfigName=viewer-config-fleets.json
+```
+
+別の配信パスにあるThree.js実装を使用:
+
+```text
+http://127.0.0.1:8001/src/client/index.html?threejsRoot=/work/hakoniwa-threejs-drone&viewerConfigName=viewer-config-fleets.json
+```
+
+`threejsRoot`は、ブラウザから同じHTTP配信ルート上で取得できるパスである必要があります。
+
+## PLATEAU渋谷GLB
+
+渋谷エリアのPLATEAU派生GLBは、map-viewerのRelease Assetとして配布する方針です。
+
+- Release: https://github.com/hakoniwalab/hakoniwa-map-viewer/releases
+- Asset: `13113_shibuya-ku_pref_2023_citygml_2_op.glb`
+- 従来の配置先: `assets/models/`
+
+このGLBは標準起動には不要です。既定のbase Viewerは、GLBがなくても`doctor`、`test`、`smoke`を実行できます。
+
+PLATEAU都市表示を行うRecipeでは、GLB、対応するscene config、原点、座標軸、スケール、出典、checksumを一つのAsset Contractとして明示する必要があります。Releaseへ正式登録する際は、PLATEAUの出典表示と加工内容を記録したファイルをAssetと一緒に提供します。
+
+## 座標変換
+
+地図表示では、ドローン状態のROS座標を次の順で変換します。
+
+```text
+ROS frame -> ENU -> latitude / longitude
+```
+
+`src/client/src/frame.js`が次を担当します。
+
+- ROS / ENU変換
+- EPSG:6677を用いた平面直角座標変換
+- 指定原点からの緯度経度算出
+
+既定の表示原点は渋谷エリアの`35.6625, 139.70625`です。画面から変更できます。
+
+## UI
+
+- `connect`: WebSocketへ接続
+- WebSocket URI: 接続先を指定
+- Viewer Config: 使用中のThree.js設定を表示
+- Drone: 注視対象を選択
+- Follow selected: 選択機体を地図と3Dカメラで追従
+- Origin: 表示用の緯度経度原点を変更
+- Drone State: ROS位置とRPY姿勢を表示
+
+## 技術スタック
+
+- Three.js: ドローンと3Dシーンの描画
+- Leaflet: OpenStreetMap上の位置と飛行軌跡の表示
+- proj4: ROS / ENU座標と緯度経度の変換
+- Hakoniwa PDU JavaScript: WebSocket経由のPDU受信
+
+## 関連コンポーネント
+
+- `hakoniwa-threejs-drone`: 3D描画とViewer公開API
+- `hakoniwa-pdu-bridge-core`: shared-memory PDUとWebSocketの橋渡し
+- `hakoniwa-drone-core`: ドローン物理と状態生成
+- `hakoniwa-envsim`: 環境モデルとPLATEAU関連データ
+- `hakoniwa-business-pack`: Foundation、Recipe workspace、Launcher、検証記録
+
+## 検証範囲
+
+GitHub Actionsでは、再帰submoduleを取得した上で次を実行します。
 
 ```bash
- bash ./drone-launcher.bash ./config/launcher/docker-api-mujoco-shibuya-1.json
- ```
+python tools/hako.py doctor
+python tools/hako.py test
+python tools/hako.py smoke
+```
 
- 補足：
-
-- `drone-launcher.bash` は、箱庭Launcherです。指定されたコンフィグファイルに基づいて、箱庭アセットを起動します。
-- `./config/launcher/` 配下には、複数のコンフィグファイルがありますが、今回の例では以下のファイルを指定しています。
-  - `docker-api-mujoco-shibuya-1.json` 
-      - Dockerコンテナ上で、MuJoCo物理エンジンを利用し、PLATEAU渋谷エリアの都市の中を１台のドローンが飛行するものです。
-- 他のコンフィグファイルを指定することで、異なるシミュレーションを実行できます。
-  - 2台同時の場合： `docker-api-mujoco-shibuya-2.json`
-  - 10台同時の場合： `docker-api-mujoco-shibuya-10.json`
+ブラウザでの実描画、WebSocket接続、ドローン位置更新、PLATEAU GLBとMuJoCoの座標一致はE2E Recipeの検証対象です。
