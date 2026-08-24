@@ -76,13 +76,39 @@ async function loadThreejsModules(threejsRoot) {
 const map = L.map('map').setView([35.6812, 139.7671], 15); // 東京駅
 let ORIGIN_LAT = 35.6625;   // zone の原点（仮）
 let ORIGIN_LON = 139.70625;
-const TRAIL_KEEP_MS = 10000_000; // 10000秒だけ残す
+const SELECTED_TRAIL_KEEP_MS = 4000;
+const FLEET_TRAIL_KEEP_MS = 1200;
 let followMode = true;        // 自動スクロールON/OFF
-const droneIcon = L.icon({
-  iconUrl: '/images/drone.svg',
-  iconSize: [32, 32],
-  iconAnchor: [16, 16]
-});
+let fleetDroneCount = 1;
+
+function fleetMarkerSize(droneCount) {
+  if (droneCount <= 16) return 28;
+  if (droneCount <= 64) return 20;
+  if (droneCount <= 128) return 14;
+  return 10;
+}
+
+function markerIconFor(droneId) {
+  const baseSize = fleetMarkerSize(fleetDroneCount);
+  const selected = String(droneId) === String(currentDroneId);
+  const size = selected ? Math.min(28, baseSize + 6) : baseSize;
+  return L.icon({
+    iconUrl: '/images/drone.svg',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
+function refreshFleetPresentation() {
+  drones.forEach((state, droneId) => {
+    const selected = String(droneId) === String(currentDroneId);
+    state.marker?.setIcon(markerIconFor(droneId));
+    state.trailPolyline?.setStyle({
+      weight: selected ? 2.5 : 1,
+      opacity: selected ? 0.7 : 0.25,
+    });
+  });
+}
 
 // OSMタイル
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -140,7 +166,7 @@ function updateDroneMarker(droneId, lat, lon, yawDeg) {
   if (!st.marker) {
     // 最初だけ作成
     st.marker = L.marker(latlng, {
-      icon: droneIcon,
+      icon: markerIconFor(droneId),
       // rotatedMarker 使うなら:
       // rotationAngle: HakoniwaFrame.rad2deg(yawRad),
       // rotationOrigin: 'center center'
@@ -164,7 +190,9 @@ function updateDroneTrail(droneId, lat, lon) {
   // console.log("trail push:", lat.toFixed(7), lon.toFixed(7));
 
   // 古い点を削除
-  const cutoff = now - TRAIL_KEEP_MS;
+  const selected = String(droneId) === String(currentDroneId);
+  const keepMs = selected ? SELECTED_TRAIL_KEEP_MS : FLEET_TRAIL_KEEP_MS;
+  const cutoff = now - keepMs;
   st.trail = st.trail.filter(p => p.t >= cutoff);
 
   // 2点未満なら線は見えないのでここで終わり
@@ -176,9 +204,9 @@ function updateDroneTrail(droneId, lat, lon) {
   if (!st.trailPolyline) {
     const color = 'red';
     st.trailPolyline = L.polyline(latlngs, {
-      color: color,      // はっきりした色に
-      weight: 5,         // 少し太め
-      opacity: 0.9
+      color,
+      weight: selected ? 2.5 : 1,
+      opacity: selected ? 0.7 : 0.25,
     }).addTo(map);
   } else {
     st.trailPolyline.setLatLngs(latlngs);
@@ -195,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const connectBtn = document.getElementById('connect-btn');
   const droneSelect = document.getElementById("drone-select");
   const followCheckbox = document.getElementById('follow-checkbox');
+  const nightModeCheckbox = document.getElementById('night-mode-checkbox');
   const latInput = document.getElementById('origin-lat');
   const lonInput = document.getElementById('origin-lon');
   const applyOriginBtn = document.getElementById('apply-origin-btn');
@@ -202,8 +231,17 @@ document.addEventListener('DOMContentLoaded', () => {
   latInput.value = ORIGIN_LAT;
   lonInput.value = ORIGIN_LON;
 
+  function applyNightMode(enabled) {
+    document.body.classList.toggle('night-mode', !!enabled);
+    if (viewer && typeof viewer.setNightMode === 'function') {
+      viewer.setNightMode(!!enabled);
+    }
+  }
+  applyNightMode(nightModeCheckbox?.checked ?? false);
+
   function populateDroneSelect() {
     const ds = viewer ? viewer.getDrones() : [];
+    fleetDroneCount = Math.max(1, ds.length);
     droneSelect.innerHTML = "";
 
     ds.forEach((drone, index) => {
@@ -217,9 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
       currentDroneId = String(ds[0].droneId ?? 0);
       droneSelect.value = currentDroneId;
     }
+    refreshFleetPresentation();
   }
   droneSelect.addEventListener("change", () => {
     currentDroneId = droneSelect.value;
+    refreshFleetPresentation();
 
     if (viewer) {
       viewer.focusDroneById(currentDroneId);
@@ -265,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await viewer.initialize({
           droneConfigPath: viewerConfig.sceneConfigPath,
         });
+        applyNightMode(nightModeCheckbox?.checked ?? false);
         if (viewerConfigNameInput) {
           viewerConfigNameInput.value = viewerConfigName;
         }
@@ -323,6 +364,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewer) {
       viewer.setFollowSelectedEnabled(followMode);
     }
+  });
+  nightModeCheckbox?.addEventListener('change', () => {
+    applyNightMode(nightModeCheckbox.checked);
   });
 
   function startPduPolling() {

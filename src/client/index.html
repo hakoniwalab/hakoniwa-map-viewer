@@ -117,6 +117,18 @@
       font-size: 14px;
       font-weight: bold;
     }
+    body.night-mode #panel {
+      color: #dce8ff;
+      background-color: #101827;
+    }
+    body.night-mode .prop-box {
+      color: #dce8ff;
+      background: #182338;
+      border-color: #40506a;
+    }
+    body.night-mode #map .leaflet-tile-pane {
+      filter: brightness(0.48) saturate(0.72) hue-rotate(175deg);
+    }
   </style>
 </head>
 
@@ -156,6 +168,13 @@
         <label>
           <input type="checkbox" id="follow-checkbox" checked>
           Follow selected
+        </label>
+      </div>
+
+      <div style="margin-top:4px;">
+        <label>
+          <input type="checkbox" id="night-mode-checkbox" checked>
+          Night mode
         </label>
       </div>
 

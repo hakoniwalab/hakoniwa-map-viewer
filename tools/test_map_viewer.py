@@ -43,6 +43,15 @@ class MapViewerContractTest(unittest.TestCase):
         self.assertIn("return [-y_ros, x_ros, z_ros]", frame)
         self.assertIn("function ENUToLatLon", frame)
 
+    def test_large_fleet_map_presentation_is_adaptive(self) -> None:
+        ui = self.read("src/client/src/ui.js")
+        self.assertIn("function fleetMarkerSize", ui)
+        self.assertIn("if (droneCount <= 128) return 14", ui)
+        self.assertIn("FLEET_TRAIL_KEEP_MS = 1200", ui)
+        self.assertIn("SELECTED_TRAIL_KEEP_MS = 4000", ui)
+        self.assertIn("selected ? 2.5 : 1", ui)
+        self.assertNotIn("await viewer.syncDroneStates()", ui)
+
     def test_readme_describes_current_component_boundary(self) -> None:
         readme = self.read("README.md")
         self.assertNotIn("hakoniwa-webserver", readme)
