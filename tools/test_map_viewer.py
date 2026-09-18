@@ -26,6 +26,13 @@ class MapViewerContractTest(unittest.TestCase):
         self.assertIn('src="./src/ui.js"', html)
         self.assertIn("Hakoniwa Map + 3D Drone Viewer", html)
 
+    def test_three_main_layout_places_map_in_bottom_left_inset(self) -> None:
+        html = self.read("src/client/index.html")
+        self.assertIn("body.layout-three-main #map-container", html)
+        self.assertIn("left: 16px", html)
+        self.assertIn("bottom: 16px", html)
+        self.assertIn("get('layout') === 'three-main'", html)
+
     def test_ui_uses_public_threejs_viewer_api(self) -> None:
         ui = self.read("src/client/src/ui.js")
         self.assertIn(
