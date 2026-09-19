@@ -29,6 +29,8 @@ class MapViewerContractTest(unittest.TestCase):
     def test_three_main_layout_places_map_in_bottom_left_inset(self) -> None:
         html = self.read("src/client/index.html")
         self.assertIn("body.layout-three-main #map-container", html)
+        self.assertIn("body.layout-three-main.panel-hidden #panel", html)
+        self.assertIn("get('panel') === 'hidden'", html)
         self.assertIn("left: 16px", html)
         self.assertIn("bottom: 16px", html)
         self.assertIn("get('layout') === 'three-main'", html)
@@ -42,6 +44,12 @@ class MapViewerContractTest(unittest.TestCase):
         self.assertIn("/src/public/drone_viewer.js", ui)
         self.assertIn("createDroneViewer", ui)
         self.assertIn("viewer.connectPdu", ui)
+        self.assertIn("viewer.getVehicles", ui)
+        self.assertIn('kind: "vehicle"', ui)
+        self.assertTrue((ROOT / "images/car.svg").is_file())
+        self.assertIn("getViewerConfigPathFromQuery", ui)
+        self.assertIn('QUERY.get("autoConnect") === "true"', ui)
+        self.assertIn('QUERY.get("originLat")', ui)
 
     def test_coordinate_conversion_contract_is_explicit(self) -> None:
         frame = self.read("src/client/src/frame.js")

@@ -24,6 +24,11 @@ function getViewerConfigNameFromQuery() {
   return name;
 }
 
+function getViewerConfigPathFromQuery() {
+  const value = new URLSearchParams(window.location.search).get("viewerConfigPath");
+  return value && value.trim().length > 0 ? value : null;
+}
+
 function resolveByBase(baseUrl, pathValue) {
   const absoluteBase = new URL(baseUrl, window.location.href).toString();
   return new URL(pathValue, absoluteBase).toString();
@@ -39,8 +44,11 @@ function resolvePathForThreejsRoot(threejsRoot, configUrl, pathValue) {
   return resolveByBase(configUrl, pathValue);
 }
 
-async function loadThreejsViewerConfig(threejsRoot, viewerConfigName) {
-  const configUrl = new URL(`${threejsRoot}/config/${viewerConfigName}`, window.location.href).toString();
+async function loadThreejsViewerConfig(threejsRoot, viewerConfigName, viewerConfigPath = null) {
+  const configUrl = new URL(
+    viewerConfigPath || `${threejsRoot}/config/${viewerConfigName}`,
+    window.location.href,
+  ).toString();
   const res = await fetch(configUrl);
   if (!res.ok) {
     throw new Error(`[HakoniwaViewer] failed to load threejs viewer config: ${configUrl}`);
@@ -49,8 +57,11 @@ async function loadThreejsViewerConfig(threejsRoot, viewerConfigName) {
   if (!cfg?.three?.sceneConfigPath || !cfg?.pdu?.pduDefPath) {
     throw new Error(`[HakoniwaViewer] invalid viewer config: ${configUrl}`);
   }
-  const resolvedSceneConfigPath = resolvePathForThreejsRoot(threejsRoot, configUrl, cfg.three.sceneConfigPath);
-  const resolvedPduDefPath = resolvePathForThreejsRoot(threejsRoot, configUrl, cfg.pdu.pduDefPath);
+  const resolver = viewerConfigPath
+    ? (value) => resolveByBase(configUrl, value)
+    : (value) => resolvePathForThreejsRoot(threejsRoot, configUrl, value);
+  const resolvedSceneConfigPath = resolver(cfg.three.sceneConfigPath);
+  const resolvedPduDefPath = resolver(cfg.pdu.pduDefPath);
   const normalizedConfig = JSON.parse(JSON.stringify(cfg));
   normalizedConfig.three.sceneConfigPath = resolvedSceneConfigPath;
   normalizedConfig.pdu.pduDefPath = resolvedPduDefPath;
@@ -72,10 +83,13 @@ async function loadThreejsModules(threejsRoot) {
   };
 }
 
+const QUERY = new URLSearchParams(window.location.search);
+const QUERY_ORIGIN_LAT = QUERY.has("originLat") ? Number(QUERY.get("originLat")) : NaN;
+const QUERY_ORIGIN_LON = QUERY.has("originLon") ? Number(QUERY.get("originLon")) : NaN;
+let ORIGIN_LAT = Number.isFinite(QUERY_ORIGIN_LAT) ? QUERY_ORIGIN_LAT : 35.6625;
+let ORIGIN_LON = Number.isFinite(QUERY_ORIGIN_LON) ? QUERY_ORIGIN_LON : 139.70625;
 // マップ初期化
-const map = L.map('map').setView([35.6812, 139.7671], 15); // 東京駅
-let ORIGIN_LAT = 35.6625;   // zone の原点（仮）
-let ORIGIN_LON = 139.70625;
+const map = L.map('map').setView([ORIGIN_LAT, ORIGIN_LON], 17);
 const SELECTED_TRAIL_KEEP_MS = 4000;
 const FLEET_TRAIL_KEEP_MS = 1200;
 let followMode = true;        // 自動スクロールON/OFF
@@ -88,12 +102,15 @@ function fleetMarkerSize(droneCount) {
   return 10;
 }
 
-function markerIconFor(droneId) {
+const DRONE_ICON_URL = new URL("../../../images/drone.svg", import.meta.url).toString();
+const CAR_ICON_URL = new URL("../../../images/car.svg", import.meta.url).toString();
+
+function markerIconFor(droneId, kind = "drone") {
   const baseSize = fleetMarkerSize(fleetDroneCount);
   const selected = String(droneId) === String(currentDroneId);
   const size = selected ? Math.min(28, baseSize + 6) : baseSize;
   return L.icon({
-    iconUrl: '/images/drone.svg',
+    iconUrl: kind === "vehicle" ? CAR_ICON_URL : DRONE_ICON_URL,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
@@ -102,7 +119,7 @@ function markerIconFor(droneId) {
 function refreshFleetPresentation() {
   drones.forEach((state, droneId) => {
     const selected = String(droneId) === String(currentDroneId);
-    state.marker?.setIcon(markerIconFor(droneId));
+    state.marker?.setIcon(markerIconFor(droneId, state.kind));
     state.trailPolyline?.setStyle({
       weight: selected ? 2.5 : 1,
       opacity: selected ? 0.7 : 0.25,
@@ -123,6 +140,7 @@ function getOrCreateDroneState(id) {
   if (!st) {
     st = {
       marker: null,
+      kind: "drone",
       trail: [],
       trailPolyline: null,
       lastState: null, // { x_ros, y_ros, z_ros, roll, pitch, yaw }
@@ -159,14 +177,15 @@ function updateDroneProperties(droneId, x_ros, y_ros, z_ros, rollDeg, pitchDeg, 
   setText(propElems.yawDeg,   yawDeg.toFixed(1));
 }
 
-function updateDroneMarker(droneId, lat, lon, yawDeg) {
+function updateDroneMarker(droneId, lat, lon, yawDeg, kind = "drone") {
   const st = getOrCreateDroneState(droneId);
+  st.kind = kind;
   const latlng = [lat, lon];
 
   if (!st.marker) {
     // 最初だけ作成
     st.marker = L.marker(latlng, {
-      icon: markerIconFor(droneId),
+      icon: markerIconFor(droneId, kind),
       // rotatedMarker 使うなら:
       // rotationAngle: HakoniwaFrame.rad2deg(yawRad),
       // rotationOrigin: 'center center'
@@ -239,20 +258,36 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   applyNightMode(nightModeCheckbox?.checked ?? false);
 
+  function trackedEntities() {
+    const droneEntities = (viewer?.getDrones?.() ?? []).map((item, index) => ({
+      id: item.droneId ?? index,
+      name: item.name ?? String(item.droneId ?? index),
+      kind: "drone",
+      item,
+    }));
+    const vehicleEntities = (viewer?.getVehicles?.() ?? []).map((item, index) => ({
+      id: item.vehicleId ?? index,
+      name: item.config?.name ?? String(item.vehicleId ?? index),
+      kind: "vehicle",
+      item,
+    }));
+    return [...droneEntities, ...vehicleEntities];
+  }
+
   function populateDroneSelect() {
-    const ds = viewer ? viewer.getDrones() : [];
+    const ds = trackedEntities();
     fleetDroneCount = Math.max(1, ds.length);
     droneSelect.innerHTML = "";
 
-    ds.forEach((drone, index) => {
+    ds.forEach((entity) => {
       const opt = document.createElement("option");
-      opt.value = drone.droneId ?? index;
-      opt.textContent = drone.name ?? `${drone.droneId}`;
+      opt.value = entity.id;
+      opt.textContent = entity.name;
       droneSelect.appendChild(opt);
     });
 
     if (ds.length > 0) {
-      currentDroneId = String(ds[0].droneId ?? 0);
+      currentDroneId = String(ds[0].id);
       droneSelect.value = currentDroneId;
     }
     refreshFleetPresentation();
@@ -297,7 +332,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const threejsRoot = getThreejsRootFromQuery();
         const viewerConfigName = getViewerConfigNameFromQuery();
         const modules = await loadThreejsModules(threejsRoot);
-        const viewerConfig = await loadThreejsViewerConfig(threejsRoot, viewerConfigName);
+        const viewerConfig = await loadThreejsViewerConfig(
+          threejsRoot,
+          viewerConfigName,
+          getViewerConfigPathFromQuery(),
+        );
         viewer = modules.createDroneViewer();
         viewer.configure(viewerConfig.config);
         console.log("[HakoniwaViewer] threejsRoot:", threejsRoot);
@@ -340,6 +379,9 @@ document.addEventListener('DOMContentLoaded', () => {
       connectBtn.disabled = false;
     }
   });
+  if (QUERY.get("autoConnect") === "true") {
+    connectBtn.click();
+  }
   if (applyOriginBtn) {
     applyOriginBtn.addEventListener('click', () => {
       const lat = parseFloat(latInput.value);
@@ -385,6 +427,26 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDroneMarker(drone.droneId, lat, lon, yawDeg);
         updateDroneTrail(drone.droneId, lat, lon);
 
+      });
+      const vehicles = viewer.getVehicles?.() ?? [];
+      vehicles.forEach(vehicle => {
+        const transform = vehicle.latestPose;
+        const translation = transform?.translation;
+        const rotation = transform?.rotation;
+        if (!translation || !rotation) return;
+        // Vehicle state uses the MuJoCo world frame X=North,Y=-East,Z=Up.
+        const east = -translation.y;
+        const north = translation.x;
+        const [lat, lon] = HakoniwaFrame.ENUToLatLon(
+          ORIGIN_LAT, ORIGIN_LON, east, north,
+        );
+        const yawMujoco = Math.atan2(
+          2 * (rotation.w * rotation.z + rotation.x * rotation.y),
+          1 - 2 * (rotation.y * rotation.y + rotation.z * rotation.z),
+        );
+        const yawEnuDeg = yawMujoco * 180 / Math.PI + 90;
+        updateDroneMarker(vehicle.vehicleId, lat, lon, yawEnuDeg, "vehicle");
+        updateDroneTrail(vehicle.vehicleId, lat, lon);
       });
     },  100);
   }

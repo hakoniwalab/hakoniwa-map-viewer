@@ -87,6 +87,9 @@
     }
 
     /* 3Dを主表示にし、地図を左下の小型パネルとして重ねる。 */
+    body.layout-three-main.panel-hidden #panel {
+      display: none;
+    }
     body.layout-three-main #right-container {
       position: relative;
       display: block;
@@ -167,6 +170,9 @@
   <script>
     if (new URLSearchParams(window.location.search).get('layout') === 'three-main') {
       document.body.classList.add('layout-three-main');
+    }
+    if (new URLSearchParams(window.location.search).get('panel') === 'hidden') {
+      document.body.classList.add('panel-hidden');
     }
   </script>
   <div id="main-container">
