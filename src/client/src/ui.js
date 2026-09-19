@@ -246,6 +246,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const latInput = document.getElementById('origin-lat');
   const lonInput = document.getElementById('origin-lon');
   const applyOriginBtn = document.getElementById('apply-origin-btn');
+  let wsUriEdited = false;
+  wsUriInput?.addEventListener('input', () => {
+    wsUriEdited = true;
+  });
 
   latInput.value = ORIGIN_LAT;
   lonInput.value = ORIGIN_LON;
@@ -325,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
   connectBtn.addEventListener('click', async () => {
     connectBtn.disabled = true;
     connectBtn.textContent = "connecting...";
-    const wsUri = (document.getElementById('ws-uri-input')?.value || "").trim() || "ws://127.0.0.1:8765";
+    let wsUri = (wsUriInput?.value || "").trim() || "ws://127.0.0.1:8765";
 
     try {
       if (!viewer) {
@@ -348,8 +352,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (viewerConfigNameInput) {
           viewerConfigNameInput.value = viewerConfigName;
         }
-        if (wsUriInput && (!wsUriInput.value || wsUriInput.value.trim().length === 0)) {
-          wsUriInput.value = viewerConfig.wsUri;
+        if (!wsUriEdited) {
+          wsUri = viewerConfig.wsUri;
+          if (wsUriInput) wsUriInput.value = wsUri;
         }
       }
       if (!started) {
