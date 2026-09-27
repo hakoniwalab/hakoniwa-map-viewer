@@ -51,6 +51,14 @@ class MapViewerContractTest(unittest.TestCase):
         self.assertIn('QUERY.get("autoConnect") === "true"', ui)
         self.assertIn('QUERY.get("originLat")', ui)
 
+    def test_fault_panel_is_mounted_only_for_configured_targets(self) -> None:
+        html = self.read("src/client/index.html")
+        ui = self.read("src/client/src/ui.js")
+        self.assertIn('id="fault-panel-container"', html)
+        self.assertIn("viewer.getFaultInjectionConfig?.()", ui)
+        self.assertIn("/src/fault_injection/fault_panel.js", ui)
+        self.assertIn("mountFaultPanel(container, viewer)", ui)
+
     def test_coordinate_conversion_contract_is_explicit(self) -> None:
         frame = self.read("src/client/src/frame.js")
         self.assertIn('defs["EPSG:6677"]', frame)

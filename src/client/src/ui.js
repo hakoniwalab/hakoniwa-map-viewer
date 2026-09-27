@@ -83,6 +83,20 @@ async function loadThreejsModules(threejsRoot) {
   };
 }
 
+// Rotor fault / wind panel, shown only when the viewer config names a target.
+// Older threejs viewers have no panel module; the map keeps working without it.
+async function mountFaultPanelIfConfigured(threejsRoot, viewer) {
+  const container = document.getElementById('fault-panel-container');
+  if (!container || !viewer.getFaultInjectionConfig?.()) return;
+  try {
+    const { mountFaultPanel } = await import(`${threejsRoot}/src/fault_injection/fault_panel.js`);
+    container.replaceChildren();
+    mountFaultPanel(container, viewer);
+  } catch (e) {
+    console.warn("[HakoniwaViewer] fault panel unavailable:", e);
+  }
+}
+
 const QUERY = new URLSearchParams(window.location.search);
 const QUERY_ORIGIN_LAT = QUERY.has("originLat") ? Number(QUERY.get("originLat")) : NaN;
 const QUERY_ORIGIN_LON = QUERY.has("originLon") ? Number(QUERY.get("originLon")) : NaN;
@@ -378,6 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       connectBtn.textContent = "connected";
       startPduPolling();
+      await mountFaultPanelIfConfigured(getThreejsRootFromQuery(), viewer);
     } catch (e) {
       console.error(e);
       connectBtn.textContent = "error";
