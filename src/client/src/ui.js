@@ -257,6 +257,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const droneSelect = document.getElementById("drone-select");
   const followCheckbox = document.getElementById('follow-checkbox');
   const nightModeCheckbox = document.getElementById('night-mode-checkbox');
+  const flightPathRow = document.getElementById('flight-path-row');
+  const flightPathCheckbox = document.getElementById('flight-path-checkbox');
   const latInput = document.getElementById('origin-lat');
   const lonInput = document.getElementById('origin-lon');
   const applyOriginBtn = document.getElementById('apply-origin-btn');
@@ -275,6 +277,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   applyNightMode(nightModeCheckbox?.checked ?? false);
+
+  // The planned flight paths (viewer config flightPaths), drawn on request.
+  function applyFlightPaths() {
+    const available = typeof viewer?.hasFlightPaths === 'function' && viewer.hasFlightPaths();
+    if (flightPathRow) flightPathRow.hidden = !available;
+    if (available) viewer.setFlightPathsVisible(!!flightPathCheckbox?.checked);
+  }
 
   function trackedEntities() {
     const droneEntities = (viewer?.getDrones?.() ?? []).map((item, index) => ({
@@ -363,6 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
           droneConfigPath: viewerConfig.sceneConfigPath,
         });
         applyNightMode(nightModeCheckbox?.checked ?? false);
+        applyFlightPaths();
         if (viewerConfigNameInput) {
           viewerConfigNameInput.value = viewerConfigName;
         }
@@ -430,6 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
   nightModeCheckbox?.addEventListener('change', () => {
     applyNightMode(nightModeCheckbox.checked);
   });
+  flightPathCheckbox?.addEventListener('change', applyFlightPaths);
 
   function startPduPolling() {
     setInterval(() => {
