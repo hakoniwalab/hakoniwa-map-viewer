@@ -107,6 +107,21 @@ const map = L.map('map').setView([ORIGIN_LAT, ORIGIN_LON], 17);
 const SELECTED_TRAIL_KEEP_MS = 4000;
 const FLEET_TRAIL_KEEP_MS = 1200;
 let followMode = true;        // 自動スクロールON/OFF
+
+// A fixed camera shot from the URL: cameraEnu=east,north,up&lookAtEnu=east,north,up
+// (Urban ENU metres) and optionally cameraFov=degrees. null without one.
+function getCameraPoseFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const parse = (name) => {
+    const values = (params.get(name) || '').split(',').map(Number);
+    return values.length === 3 && values.every(Number.isFinite) ? values : null;
+  };
+  const position = parse('cameraEnu');
+  const target = parse('lookAtEnu');
+  if (!position || !target) return null;
+  const fov = Number(params.get('cameraFov'));
+  return { position, target, ...(Number.isFinite(fov) && fov > 0 ? { fov } : {}) };
+}
 let fleetDroneCount = 1;
 
 function fleetMarkerSize(droneCount) {
@@ -406,9 +421,23 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!started) {
         started = true;
         populateDroneSelect();
-        viewer.setFollowSelectedEnabled(followMode);
-        if (currentDroneId && viewer) {
-          viewer.focusDroneById(currentDroneId);
+        // For tools and the console (e.g. viewer.getCameraPose()).
+        window.hakoniwaViewer = viewer;
+        // attachedCameras=off: no picture-in-picture of a vehicle's own camera (screenshots).
+        if (new URLSearchParams(window.location.search).get('attachedCameras') === 'off') {
+          viewer.setAttachedCamerasEnabled?.(false);
+        }
+        const cameraPose = getCameraPoseFromQuery();
+        if (cameraPose && typeof viewer.setCameraPose === 'function') {
+          // A fixed shot from the URL (cameraEnu / lookAtEnu): do not follow.
+          followMode = false;
+          if (followCheckbox) followCheckbox.checked = false;
+          viewer.setCameraPose(cameraPose);
+        } else {
+          viewer.setFollowSelectedEnabled(followMode);
+          if (currentDroneId && viewer) {
+            viewer.focusDroneById(currentDroneId);
+          }
         }
       }
       // ② PDU 接続
