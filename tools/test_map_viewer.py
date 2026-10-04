@@ -104,6 +104,18 @@ class MapViewerContractTest(unittest.TestCase):
         self.assertIn("viewer?.pinTrails?.()", ui)
         self.assertIn("viewer?.clearPinnedTrails?.()", ui)
 
+    def test_a_fixed_camera_shot_can_come_from_the_url(self) -> None:
+        ui = self.read("src/client/src/ui.js")
+        # cameraEnu / lookAtEnu (/ cameraFov): the same shot for several runs, no following.
+        self.assertIn("parse('cameraEnu')", ui)
+        self.assertIn("parse('lookAtEnu')", ui)
+        self.assertIn("params.get('cameraFov')", ui)
+        self.assertIn("viewer.setCameraPose(cameraPose)", ui)
+        # attachedCameras=off hides the picture-in-picture for screenshots.
+        self.assertIn("get('attachedCameras') === 'off'", ui)
+        self.assertIn("viewer.setAttachedCamerasEnabled?.(false)", ui)
+        self.assertIn("window.hakoniwaViewer = viewer", ui)
+
 
 if __name__ == "__main__":
     unittest.main()
