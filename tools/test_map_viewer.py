@@ -93,6 +93,17 @@ class MapViewerContractTest(unittest.TestCase):
         self.assertNotIn("SHIBUYA_GLB", required_section)
         self.assertIn("optional PLATEAU Shibuya GLB", hako)
 
+    def test_trails_can_be_pinned_when_the_viewer_supports_it(self) -> None:
+        html = self.read("src/client/index.html")
+        self.assertIn('id="trail-pin-btn"', html)
+        self.assertIn('title="Keep the current trails (green) and start new ones"', html)
+        self.assertIn('id="trail-unpin-btn"', html)
+        self.assertIn('title="Remove the kept trails"', html)
+        ui = self.read("src/client/src/ui.js")
+        self.assertIn("typeof viewer?.pinTrails === 'function'", ui)
+        self.assertIn("viewer?.pinTrails?.()", ui)
+        self.assertIn("viewer?.clearPinnedTrails?.()", ui)
+
 
 if __name__ == "__main__":
     unittest.main()

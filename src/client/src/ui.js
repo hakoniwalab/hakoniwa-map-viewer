@@ -262,6 +262,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const trailRow = document.getElementById('trail-row');
   const trailCheckbox = document.getElementById('trail-checkbox');
   const trailClearBtn = document.getElementById('trail-clear-btn');
+  const trailPinBtn = document.getElementById('trail-pin-btn');
+  const trailUnpinBtn = document.getElementById('trail-unpin-btn');
   const latInput = document.getElementById('origin-lat');
   const lonInput = document.getElementById('origin-lon');
   const applyOriginBtn = document.getElementById('apply-origin-btn');
@@ -298,6 +300,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const available = typeof viewer?.setTrailsVisible === 'function';
     if (trailRow) trailRow.hidden = !available;
     if (available) viewer.setTrailsVisible(!!trailCheckbox?.checked);
+    // Pinned (kept) tracks: only with a viewer that has them.
+    const pinnable = typeof viewer?.pinTrails === 'function';
+    if (trailPinBtn) trailPinBtn.hidden = !pinnable;
+    if (trailUnpinBtn) trailUnpinBtn.hidden = !pinnable;
   }
 
   function trackedEntities() {
@@ -459,6 +465,8 @@ document.addEventListener('DOMContentLoaded', () => {
   flightPathCheckbox?.addEventListener('change', applyFlightPaths);
   trailCheckbox?.addEventListener('change', applyTrails);
   trailClearBtn?.addEventListener('click', () => viewer?.clearTrails?.());
+  trailPinBtn?.addEventListener('click', () => viewer?.pinTrails?.());
+  trailUnpinBtn?.addEventListener('click', () => viewer?.clearPinnedTrails?.());
 
   function startPduPolling() {
     setInterval(() => {
