@@ -96,7 +96,7 @@ class MapViewerContractTest(unittest.TestCase):
     def test_trails_can_be_pinned_when_the_viewer_supports_it(self) -> None:
         html = self.read("src/client/index.html")
         self.assertIn('id="trail-pin-btn"', html)
-        self.assertIn('title="Keep the current trails (green) and start new ones"', html)
+        self.assertIn('title="Keep the current trails (green, then purple, ...) and start new ones"', html)
         self.assertIn('id="trail-unpin-btn"', html)
         self.assertIn('title="Remove the kept trails"', html)
         ui = self.read("src/client/src/ui.js")
