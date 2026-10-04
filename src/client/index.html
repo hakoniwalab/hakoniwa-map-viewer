@@ -220,12 +220,21 @@
         </label>
       </div>
 
-      <!-- Shown when the viewer config carries planned flight paths (flightPaths). -->
+      <!-- Shown when the viewer config carries planned paths (flightPaths, routePaths). -->
       <div id="flight-path-row" style="margin-top:4px;" hidden>
         <label>
           <input type="checkbox" id="flight-path-checkbox">
-          Flight path
+          Planned path
         </label>
+      </div>
+
+      <!-- Where each Drone and vehicle has actually been (recorded all along). -->
+      <div id="trail-row" style="margin-top:4px;" hidden>
+        <label>
+          <input type="checkbox" id="trail-checkbox">
+          Trail
+        </label>
+        <button id="trail-clear-btn" type="button" style="margin-left:6px;">Clear</button>
       </div>
 
       <hr>

@@ -259,6 +259,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const nightModeCheckbox = document.getElementById('night-mode-checkbox');
   const flightPathRow = document.getElementById('flight-path-row');
   const flightPathCheckbox = document.getElementById('flight-path-checkbox');
+  const trailRow = document.getElementById('trail-row');
+  const trailCheckbox = document.getElementById('trail-checkbox');
+  const trailClearBtn = document.getElementById('trail-clear-btn');
   const latInput = document.getElementById('origin-lat');
   const lonInput = document.getElementById('origin-lon');
   const applyOriginBtn = document.getElementById('apply-origin-btn');
@@ -280,9 +283,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // The planned flight paths (viewer config flightPaths), drawn on request.
   function applyFlightPaths() {
-    const available = typeof viewer?.hasFlightPaths === 'function' && viewer.hasFlightPaths();
+    // hasPlannedPaths covers vehicle routes too; older viewers have only the flight paths.
+    const planned = typeof viewer?.hasPlannedPaths === 'function';
+    const available = planned ? viewer.hasPlannedPaths()
+      : typeof viewer?.hasFlightPaths === 'function' && viewer.hasFlightPaths();
     if (flightPathRow) flightPathRow.hidden = !available;
-    if (available) viewer.setFlightPathsVisible(!!flightPathCheckbox?.checked);
+    if (!available) return;
+    if (planned) viewer.setPlannedPathsVisible(!!flightPathCheckbox?.checked);
+    else viewer.setFlightPathsVisible(!!flightPathCheckbox?.checked);
+  }
+
+  // The actual tracks: recorded by the viewer all along, shown on request.
+  function applyTrails() {
+    const available = typeof viewer?.setTrailsVisible === 'function';
+    if (trailRow) trailRow.hidden = !available;
+    if (available) viewer.setTrailsVisible(!!trailCheckbox?.checked);
   }
 
   function trackedEntities() {
@@ -373,6 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         applyNightMode(nightModeCheckbox?.checked ?? false);
         applyFlightPaths();
+        applyTrails();
         if (viewerConfigNameInput) {
           viewerConfigNameInput.value = viewerConfigName;
         }
@@ -441,6 +457,8 @@ document.addEventListener('DOMContentLoaded', () => {
     applyNightMode(nightModeCheckbox.checked);
   });
   flightPathCheckbox?.addEventListener('change', applyFlightPaths);
+  trailCheckbox?.addEventListener('change', applyTrails);
+  trailClearBtn?.addEventListener('click', () => viewer?.clearTrails?.());
 
   function startPduPolling() {
     setInterval(() => {
