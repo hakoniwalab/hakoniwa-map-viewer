@@ -120,6 +120,44 @@
       display: none;
     }
 
+    /* 狭い画面（スマホ）：3D を全面に出し、パネルと地図は右上のボタンで開く。 */
+    #view-toggles { display: none; }
+    @media (max-width: 820px) {
+      #main-container { position: relative; }
+      body.layout-three-main #panel {
+        display: none;
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: min(85vw, 320px);
+        z-index: 40;
+        box-shadow: 4px 0 18px rgba(0, 0, 0, 0.45);
+      }
+      body.layout-three-main.panel-open #panel { display: block; }
+      body.layout-three-main #map-container {
+        display: none;
+        left: 8px; bottom: 8px;
+        width: min(60vw, 260px);
+        height: min(30vh, 200px);
+        min-height: 120px;
+      }
+      body.layout-three-main.map-open #map-container { display: block; }
+      body.layout-three-main #view-toggles {
+        display: flex;
+        gap: 6px;
+        position: absolute;
+        right: 8px; top: 8px;
+        z-index: 50;
+      }
+      #view-toggles button {
+        font-size: 14px;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+      }
+    }
+
     /* prop-table 周りは前のまま */
     .prop-table {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -176,6 +214,10 @@
     }
   </script>
   <div id="main-container">
+    <div id="view-toggles">
+      <button id="toggle-panel" type="button">設定</button>
+      <button id="toggle-map" type="button">地図</button>
+    </div>
     <div id="panel">
       <button id="connect-btn">connect</button>
 
@@ -340,6 +382,15 @@
         window.dispatchEvent(new Event('hakoniwa-layout-changed'));
       });
     })();
+  </script>
+  <script>
+    // 狭い画面のボタン：パネルと地図を開く・閉じる。
+    for (const [id, cls] of [['toggle-panel', 'panel-open'], ['toggle-map', 'map-open']]) {
+      document.getElementById(id).addEventListener('click', () => {
+        document.body.classList.toggle(cls);
+        window.dispatchEvent(new Event('hakoniwa-layout-changed'));
+      });
+    }
   </script>
 
 </body>
