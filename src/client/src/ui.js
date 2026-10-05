@@ -107,6 +107,8 @@ let ORIGIN_LAT = Number.isFinite(QUERY_ORIGIN_LAT) ? QUERY_ORIGIN_LAT : 35.6625;
 let ORIGIN_LON = Number.isFinite(QUERY_ORIGIN_LON) ? QUERY_ORIGIN_LON : 139.70625;
 // マップ初期化
 const map = L.map('map').setView([ORIGIN_LAT, ORIGIN_LON], 17);
+// The map container can be resized or shown later (splitter, phone toggles).
+window.addEventListener('hakoniwa-layout-changed', () => map.invalidateSize());
 const SELECTED_TRAIL_KEEP_MS = 4000;
 const FLEET_TRAIL_KEEP_MS = 1200;
 let followMode = true;        // 自動スクロールON/OFF
