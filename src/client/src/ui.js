@@ -1,3 +1,4 @@
+import { wsUriForPage } from "./ws_uri.js";
 import { HakoniwaFrame } from './frame.js';
 
 console.log("[HakoniwaViewer] main.js loaded");
@@ -65,13 +66,15 @@ async function loadThreejsViewerConfig(threejsRoot, viewerConfigName, viewerConf
   const normalizedConfig = JSON.parse(JSON.stringify(cfg));
   normalizedConfig.three.sceneConfigPath = resolvedSceneConfigPath;
   normalizedConfig.pdu.pduDefPath = resolvedPduDefPath;
+  const wsUri = wsUriForPage(cfg?.pdu?.wsUri ?? "ws://127.0.0.1:8765", window.location.href);
+  normalizedConfig.pdu.wsUri = wsUri;
   return {
     configUrl,
     config: normalizedConfig,
     sceneConfigPath: resolvedSceneConfigPath,
     pduDefPath: resolvedPduDefPath,
     wireVersion: cfg?.pdu?.wireVersion ?? "v2",
-    wsUri: cfg?.pdu?.wsUri ?? "ws://127.0.0.1:8765",
+    wsUri,
   };
 }
 
